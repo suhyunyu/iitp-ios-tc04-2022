@@ -1,0 +1,17 @@
+//
+//  PrefixHeader.pch
+//  iitp-ios-tc04-2022
+//
+//  Created by lfin on 2022/04/26.
+//
+
+#ifndef PrefixHeader_pch
+#define PrefixHeader_pch
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+#ifdef __cplusplus
+#import <opencv2/opencv.hpp>
+#endif
+
+#endif /* PrefixHeader_pch */
