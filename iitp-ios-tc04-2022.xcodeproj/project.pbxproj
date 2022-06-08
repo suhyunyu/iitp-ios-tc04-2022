@@ -25,6 +25,15 @@
 		0D60F4E9281BE0F300A5A6DF /* common.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = common.cpp; sourceTree = "<group>"; };
 		0D60F4EA281BE0F300A5A6DF /* ImageConverter.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ImageConverter.hpp; sourceTree = "<group>"; };
 		0D60F4EB281BE0F300A5A6DF /* common.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = common.hpp; sourceTree = "<group>"; };
+		0D6E41CD2850854800C0418C /* ImageEvaluator_Base.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImageEvaluator_Base.hpp; sourceTree = "<group>"; };
+		0D6E41CE2850854800C0418C /* ImageProcessor_3_DistanceCalculator.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImageProcessor_3_DistanceCalculator.hpp; sourceTree = "<group>"; };
+		0D6E41CF2850854800C0418C /* ImageCache.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImageCache.hpp; sourceTree = "<group>"; };
+		0D6E41D02850854800C0418C /* ImageProcessor_Base.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImageProcessor_Base.hpp; sourceTree = "<group>"; };
+		0D6E41D12850854800C0418C /* Constants.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Constants.hpp; sourceTree = "<group>"; };
+		0D6E41D22850854900C0418C /* ImageConverter_old.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImageConverter_old.hpp; sourceTree = "<group>"; };
+		0D6E41D32850854900C0418C /* topmost.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = topmost.hpp; sourceTree = "<group>"; };
+		0D6E41D42850854900C0418C /* ImageProcessor_1_QuickConverter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImageProcessor_1_QuickConverter.hpp; sourceTree = "<group>"; };
+		0D6E41D52850854900C0418C /* ImageComparator_Base.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ImageComparator_Base.hpp; sourceTree = "<group>"; };
 		0DFB4A0F28178C5D002D234F /* iitp-ios-tc04-2022.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "iitp-ios-tc04-2022.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DFB4A1228178C5D002D234F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		0DFB4A1428178C5D002D234F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -55,20 +64,29 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0D60F4E8281BE0F300A5A6DF /* Module_OpenCV_Native_forEstablishingInterfaceLayer */ = {
+		0D60F4E8281BE0F300A5A6DF /* module */ = {
 			isa = PBXGroup;
 			children = (
+				0D6E41D12850854800C0418C /* Constants.hpp */,
+				0D6E41CF2850854800C0418C /* ImageCache.hpp */,
+				0D6E41D52850854900C0418C /* ImageComparator_Base.hpp */,
+				0D6E41D22850854900C0418C /* ImageConverter_old.hpp */,
+				0D6E41CD2850854800C0418C /* ImageEvaluator_Base.hpp */,
+				0D6E41D42850854900C0418C /* ImageProcessor_1_QuickConverter.hpp */,
+				0D6E41CE2850854800C0418C /* ImageProcessor_3_DistanceCalculator.hpp */,
+				0D6E41D02850854800C0418C /* ImageProcessor_Base.hpp */,
+				0D6E41D32850854900C0418C /* topmost.hpp */,
 				0D60F4E9281BE0F300A5A6DF /* common.cpp */,
 				0D60F4EA281BE0F300A5A6DF /* ImageConverter.hpp */,
 				0D60F4EB281BE0F300A5A6DF /* common.hpp */,
 			);
-			path = Module_OpenCV_Native_forEstablishingInterfaceLayer;
+			path = module;
 			sourceTree = "<group>";
 		};
 		0DFB4A0628178C5D002D234F = {
 			isa = PBXGroup;
 			children = (
-				0D60F4E8281BE0F300A5A6DF /* Module_OpenCV_Native_forEstablishingInterfaceLayer */,
+				0D60F4E8281BE0F300A5A6DF /* module */,
 				0DFB4A372817F7D2002D234F /* PrefixHeader.pch */,
 				0DFB4A2F2817EFF0002D234F /* CVWrapper.h */,
 				0DFB4A302817EFF0002D234F /* CVWrapper.mm */,
@@ -239,7 +257,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -299,7 +317,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;

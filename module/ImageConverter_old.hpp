@@ -1,38 +1,37 @@
 #pragma once
 
-#include "common.hpp"
+#include "Constants.hpp"
 
 namespace lpin
 {
 	namespace opencv
 	{
 		/*
-		* ¸ğµâ ¿ÜºÎ¿¡¼­ °¡Á®¿Â ºñÆ®¸Ê µ¥ÀÌÅÍ¸¦ °¡Á®¿Í ´Ù·ç±â À§ÇÑ static ÇÔ¼öµéÀ» ³ëÃâÇÏ´Â Å¬·¡½ºÀÔ´Ï´Ù.
-		* 
-		* Note: ImageConverter::Convert()´Â Ç×»ó ºñÆ®¸Ê µ¥ÀÌÅÍÀÇ »çº»À» ¸¸µì´Ï´Ù.
+			ëª¨ë“ˆ ì™¸ë¶€ì—ì„œ ê°€ì ¸ì˜¨ ë¹„íŠ¸ë§µ ë°ì´í„°ë¥¼ ê°€ì ¸ì™€ ë‹¤ë£¨ê¸° ìœ„í•œ static í•¨ìˆ˜ë“¤ì„ ë…¸ì¶œí•˜ëŠ” í´ë˜ìŠ¤ì…ë‹ˆë‹¤.
+			Note: ImageConverter::Convert()ëŠ” í•­ìƒ ë¹„íŠ¸ë§µ ë°ì´í„°ì˜ ì‚¬ë³¸ì„ ë§Œë“­ë‹ˆë‹¤.
 		*/
 		template<int img_width, int img_height>
-		class ImageConverter_Base
+		class ImageConverter_Old
 		{
 		private:
-			ImageConverter_Base() = delete;
-			~ImageConverter_Base() noexcept = delete;
+			ImageConverter_Old() = delete;
+			~ImageConverter_Old() noexcept = delete;
 		public:
 			static cv::Mat Convert(cv::Mat origin, bool convertToGrayscale)
 			{
 				cv::Mat gray;
 
-				// ÇÊ¿äÇÑ °æ¿ì grayscaleÈ­
+				// í•„ìš”í•œ ê²½ìš° grayscaleí™”
 				if ( convertToGrayscale && origin.type() != CV_8UC1 )
 				{
-					cv::cvtColor(origin, gray, Constants::external_img_convertCode_in);
+					cv::cvtColor(origin, gray, Constants<mode>::img_convertCode_in_grayscale);
 				}
 				else
 				{
 					gray = origin.clone();
 				}
 
-				// Å©±â Á¶Á¤ÀÌ ºÒÇÊ¿äÇÑ °æ¿ì ¹Ù·Î return
+				// í¬ê¸° ì¡°ì •ì´ ë¶ˆí•„ìš”í•œ ê²½ìš° ë°”ë¡œ return
 				if ( gray.cols == img_width && gray.rows == img_height )
 				{
 					return gray;
@@ -41,12 +40,12 @@ namespace lpin
 
 				cv::Mat result;
 
-				// Á¾È¾ºñ µ¿ÀÏÇÑ °æ¿ì Å©±â¸¸ Á¶Á¤
+				// ì¢…íš¡ë¹„ ë™ì¼í•œ ê²½ìš° í¬ê¸°ë§Œ ì¡°ì •
 				if ( (double)gray.rows / gray.cols == (double)img_height / img_width )
 				{
 					cv::resize(gray, result, { img_width, img_height });
 				}
-				// Á¾È¾ºñ ´Ù¸¥ °æ¿ì Crop ¹× Å©±â Á¶Á¤
+				// ì¢…íš¡ë¹„ ë‹¤ë¥¸ ê²½ìš° Crop ë° í¬ê¸° ì¡°ì •
 				else
 				{
 					int crop_start_row = gray.rows > gray.cols ?
@@ -73,11 +72,9 @@ namespace lpin
 
 			static cv::Mat Convert(void *ptr, int width, int height, bool convertToGrayscale)
 			{
-				return Convert(cv::Mat(height, width, Constants::external_img_type, ptr), convertToGrayscale);
+				return Convert(cv::Mat(height, width, Constants<mode>::external_img_type, ptr), convertToGrayscale);
 			}
 		};
-
-		typedef ImageConverter_Base<Constants::base_img_width, Constants::base_img_height> ImageConverter;
 
 	}
 }

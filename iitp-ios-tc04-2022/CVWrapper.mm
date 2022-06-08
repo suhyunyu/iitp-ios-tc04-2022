@@ -49,7 +49,7 @@
     //printf(data);
     
     char *bytePtr = (char *)[data bytes];
-    int result = lpin::opencv::PutByteBlock(bytePtr,0);
+    int result = lpin::opencv::PutByteBlock(bytePtr);
     return 0;
 }
 
@@ -98,7 +98,8 @@
     CGContextRelease(context);
     
     
-    int putImageResult = lpin::opencv::PutImage(newBitmap, width, height);
+    int putImageResult = lpin::opencv::PutImage(newBitmap);
+    //, width, height);
     
     return putImageResult;
     
