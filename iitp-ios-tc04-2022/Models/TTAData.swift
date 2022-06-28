@@ -23,3 +23,7 @@ struct TC04Base64: Codable{
         case metadata = "metadata"
     }
 }
+
+struct TestCountList: Codable{
+    let testCount: Int
+}

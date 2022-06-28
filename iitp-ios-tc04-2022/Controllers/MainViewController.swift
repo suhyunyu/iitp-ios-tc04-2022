@@ -15,10 +15,15 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
     
     @IBOutlet weak var stateLabel: UILabel!
     @IBOutlet weak var nextStepLabel: UILabel!
+    @IBOutlet weak var queryImageLabel: UILabel!
+    @IBOutlet weak var baseImageLabel: UILabel!
     
     @IBOutlet weak var LogTextview: UITextView!
     
     
+    
+    @IBOutlet weak var baseBorderView: UIView!
+    @IBOutlet weak var queryBorderView: UIView!
     @IBOutlet weak var baseImageview: UIImageView!
     @IBOutlet weak var queryImageview: UIImageView!
     
@@ -68,22 +73,30 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         shareResultButton.titleLabel?.textAlignment = .center
         shareResultButton.titleLabel?.lineBreakMode = .byWordWrapping
         
-        baseImageview.layer.borderWidth = 1
+        
+        //base 이미지 표시
+        baseBorderView.layer.borderWidth = 1
+        baseBorderView.layer.cornerRadius = 5
+        baseBorderView.layer.borderColor = UIColor.gray.cgColor
         baseImageview.layer.cornerRadius = 5
-        baseImageview.layer.borderColor = UIColor.gray.cgColor
-        queryImageview.layer.borderWidth = 1
+        
+        //query 이미지 표시
+        queryBorderView.layer.borderWidth = 1
+        queryBorderView.layer.cornerRadius = 5
+        queryBorderView.layer.borderColor = UIColor.gray.cgColor
         queryImageview.layer.cornerRadius = 5
-        queryImageview.layer.borderColor = UIColor.gray.cgColor
-        
-        
-        
-        
+
+
         //TestDataButton.setBackgroundColor(.blue, for: .normal)
         
         stateLabel.text = "초기화 중"
         
         //DB,Table 생성
-        sqliteManager.createInfoTable()
+        sqliteManager.createInfoTable()     //시험할 데이터 테이블 생성
+        sqliteManager.createCountTable()    //시험횟수 테이블
+        sqliteManager.deleteCountAll()
+        sqliteManager.insertCountData(testCount: 0)
+        print("Test count : \(sqliteManager.readCountData())")
         
         stateLabel.text = "초기화 완료"
         nextStepLabel.text  = "데이터 가져오기"
@@ -123,8 +136,8 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         print("onClickLoadData!! \(loadDataAction)")
         //json 가져오기
         let baseUrl = "https://22tta.lfin.kr/data"
-        guard let url = URL(string: baseUrl+"/json/queryPlan_v1.json") else { return }
-        //guard let url = URL(string: baseUrl+"/json/queryPlan_v1_10000.json") else { return }
+        //guard let url = URL(string: baseUrl+"/json/queryPlan_v1.json") else { return }
+        guard let url = URL(string: baseUrl+"/json/queryPlan_v1_10000.json") else { return }
    
         ttaDataManager.loadImageJsonData(fromURL: url)
         { data, error in
@@ -138,6 +151,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                     //insert 이미지 데이터 정보
                     self.sqliteManager.insertData(tc04: row)
                 }
+                
             }
             else{
                 DispatchQueue.main.async {
@@ -167,29 +181,31 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                 for img in imgList{
                     
                     // usleep(1000000) will sleep for 1 second
-                    //usleep(100000)
+                    //usleep(1000)
                     
                     guard let imageUrl = URL(string: "\(baseUrl)/images/tc04/\(img)") else { return }
                     self?.ttaDataManager.loadImage(fromURL : imageUrl){ data, error in
                         
                         
-                        if error != nil{
+                        guard let data = data,error == nil else{
                             print("image download error: \(error)")
                             return
                         }
                         
                         DispatchQueue.main.async {
                             i += 1
-                            if let imageData = UIImage(data: data!){
+                            if let imageData = UIImage(data: data){
                                 loadCount += 1
                                 print("입력 데이터 불러오는 중...(\(loadCount)/\(rowCount))")
                                 
                                 if(i<rowCount){
                                     self?.stateLabel.text = "입력 데이터 불러오는 중...(\(loadCount)/\(rowCount))"
+                                    self?.baseImageview.image = imageData
+                                
                                     
                                 }else if(i == rowCount){
                                     self?.stateLabel.text = "데이터 준비 완료(\(loadCount)/\(rowCount))"
-                                    self?.loadDataButton.setTitle("데이터\n가져오기✅", for: .normal)
+                                    self?.loadDataButton.setTitle("데이터\n가져오기 ✅", for: .normal)
                                 }
                             }
                             else{
@@ -219,12 +235,12 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
 
     }
         
-    
+ 
+    //다중 실행방지
+    var startTestRunState = false
     //모듈 초기화
     let initVal = CVWrapper.initialize(0)
     
-    //다중 실행방지
-    var startTestRunState = false
     // 시험시작
     @IBAction func onClickStarTest(_ sender: Any) {
         print("onClickStarTest : \(startTestRunState)")
@@ -244,6 +260,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         let ttaTable = self.sqliteManager.readData()
         if ttaTable.count > 0 {
             
+            
             //모듈이 동작할 스레드
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 
@@ -257,83 +274,100 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                     self?.stateLabel.text = statesMessage
                 }
                 
-                
+                var rowCount = 0
                 for row in ttaTable{
-                    
-        
-                    guard let baseImage : UIImage = self?.ttaDataManager.readImage(named: row.bFileName) else{ return }
-                    let baseImageVal = CVWrapper.putImageModule(baseImage)
-                    
-                    // query 이미지 데이터 모듈로 전달
-                    guard let queryImage : UIImage = self?.ttaDataManager.readImage(named: row.qFileName) else{ return }
-                    let queryImageVal = CVWrapper.putImageModule(queryImage)
-                    
-                    statesMessage = String(cString:CVWrapper.getPtrOfStringModule(0))
-                    print("1 :: ",statesMessage)
-                    DispatchQueue.main.async { [weak self] in
-                        self?.stateLabel.text = statesMessage
-                    }
-                    
-                    
-                    var metaData = row.metadata
+                    //반복문 1회 시행 시 마다 메모리를 비워줌
+                    autoreleasepool{
 
-                    //base64 디코딩 (Base64 encoded String -> Base64 decoded String)
-                    let decodedData = Data(base64Encoded: metaData)!
-                    //let base64DecStr = String(data:decodedData, encoding: .utf8)
-                    
+                        guard let baseImage : UIImage = self?.ttaDataManager.readImage(named: row.bFileName) else{ return }
+                        let baseImageVal = CVWrapper.putImageModule(baseImage)
 
-                    // 위치정보를 묶어서 전달
-                    let byteVal = CVWrapper.putByteBlockModule(decodedData)
-                    
-                    statesMessage = String(cString:CVWrapper.getPtrOfStringModule(0))
-                    print("2 :: ",statesMessage)
-                    DispatchQueue.main.async { [weak self] in
-                        self?.stateLabel.text = statesMessage
-                    }
+                        // query 이미지 데이터 모듈로 전달
+                        guard let queryImage : UIImage = self?.ttaDataManager.readImage(named: row.qFileName) else{ return }
+                        let queryImageVal = CVWrapper.putImageModule(queryImage)
+
+                        var statesMessage1 = String(cString:CVWrapper.getPtrOfStringModule(0))
+                        //print("1 :: ",statesMessage1)
+                        DispatchQueue.main.async { [weak self] in
+                            self?.stateLabel.text = statesMessage1
+                        }
+
+                        
+                        // meta data
+                        var metaData = row.metadata
+
+                        let decodedData = Data(base64Encoded: metaData)!  //base64 디코딩 (Base64 -> Data)
+                        //let base64DecStr = String(data:decodedData, encoding: .utf8) //base64 디코딩 (Data -> String)
+
+
+                        // 위치정보를 묶어서 전달
+                        let byteVal = CVWrapper.putByteBlockModule(decodedData)
+
+                        var statesMessage2 = String(cString:CVWrapper.getPtrOfStringModule(0))
+                        //print("2 :: ",statesMessage2)
+                        DispatchQueue.main.async { [weak self] in
+                            self?.stateLabel.text = statesMessage2
+                        }
+
+                        // 데이터 계산
+                        let processVal = CVWrapper.processModule()
+                        var statesMessage3 = String(cString:CVWrapper.getPtrOfStringModule(0))
+                        //print("3 :: ",statesMessage3)
+                        DispatchQueue.main.async { [weak self] in
+                            self?.stateLabel.text = statesMessage3
+                        }
+
+                        // 출력할 로그 데이터
+                        let logString = String(cString:CVWrapper.getPtrOfStringModule(1))
+                        print(logString)
+
+
+                        DispatchQueue.main.async { [weak self] in
+
+                            self?.baseImageview.image = self?.ttaDataManager.readImage(named: row.bFileName)
+                            self?.baseImageLabel.text = row.bFileName
+                            self?.queryImageview.image = self?.ttaDataManager.readImage(named: row.qFileName)
+                            self?.queryImageLabel.text = row.qFileName
                             
-                    // 데이터 계산
-                    let processVal = CVWrapper.processModule()
-                    statesMessage = String(cString:CVWrapper.getPtrOfStringModule(0))
-                    print("3 :: ",statesMessage)
-                    DispatchQueue.main.async { [weak self] in
-                        self?.stateLabel.text = statesMessage
+                            //로그 표시
+                            self?.LogTextview.insertText(logString + "\n")
+                            // 텍스트 추가시 스크롤 내리기
+                            if(rowCount>=5){
+                                let point = CGPoint(x: 0.0, y: ((self?.LogTextview.contentSize.height)! - (self?.LogTextview.bounds.height)!))
+                                self?.LogTextview.setContentOffset(point, animated: true)
+                                
+                            }
+
+                        }
                     }
-                    
-                    // 출력할 로그 데이터
-                    let logString = String(cString:CVWrapper.getPtrOfStringModule(1))
-                    print(logString)
-                    
-                    
-                    DispatchQueue.main.async { [weak self] in
-                        self?.LogTextview.insertText(logString + "\n")
-                        
-                        
-                        self?.baseImageview.image = self?.ttaDataManager.readImage(named: row.bFileName)
-                        self?.queryImageview.image = self?.ttaDataManager.readImage(named: row.qFileName)
-                        
-//                        let point = CGPoint(x: 0.0, y: ((self?.LogTextview.contentSize.height)! - (self?.LogTextview.bounds.height)!))
-//                        self?.LogTextview.setContentOffset(point, animated: true)
-                        
-                    }
+                    rowCount += 1
                 }
+                    
                 
-                
+                // 시험결과 csv파일 저장
                 let resultCsv = String(cString:CVWrapper.getPtrOfStringModule(2))
                 self?.csvUrl = self?.ttaDataManager.writeCSV(from: resultCsv)
                 
-
+                //thread 종료 시
                 DispatchQueue.main.async { [weak self] in
-                    self?.stateLabel.text = "시험 완료" //thread 종료 시
-                    self?.testStartButton.setTitle("시험시작✅", for: .normal)
+                    
+                    //[시험시작]버튼에 시험 횟수 표시
+                    self?.sqliteManager.updateData()
+                    var testCount = self?.sqliteManager.readCountData()
+                    self?.testStartButton.setTitle("시험시작\n(\(testCount!))", for: .normal)
+                    
+                    //진행상태
+                    self?.stateLabel.text = "시험 완료"
+                    //다음 지시사항
                     self?.nextStepLabel.text = "시험결과 내보내기"
                     
                     //텍스트 추가시 스크롤 내리기
-                    if self?.LogTextview.text.count ?? 0 > 0 {
-                        let location = (self?.LogTextview.text.count ?? 1) - 1
-                        let bottom = NSMakeRange(location, 1)
-                        self?.LogTextview.scrollRangeToVisible(bottom)
-
-                    }
+//                    if self?.LogTextview.text.count ?? 0 > 0 {
+//                        let location = (self?.LogTextview.text.count ?? 1) - 1
+//                        let bottom = NSMakeRange(location, 1)
+//                        self?.LogTextview.scrollRangeToVisible(bottom)
+//
+//                    }
                 }
                 self?.startTestRunState = false
             }
@@ -346,6 +380,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         }
             
     }
+    
     
     // 시험결과 내보내기
     @IBAction func onClickSahreTest(_ sender: UIBarButtonItem) {

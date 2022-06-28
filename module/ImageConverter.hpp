@@ -40,14 +40,7 @@ namespace lpin
 			ImageConverter_Base(ImageConverter_Base &&) = delete;
 			~ImageConverter_Base() = delete;
 
-			/*
-				변환 관련 note
-
-				Stretch 및 레터박스 적용 안 함. 따라서 변환 도중 크기를 키울 때도 종횡비 차이에 따라 crop이 발생할 수 있음
-				Crop은 항상 중앙을 기준으로 두고 귀퉁이를 자름
-				항상 crop을 resize보다 먼저 함 - 극단적인 종횡비 변화에 취약하나 resize 속도가 빠른 편
-			*/
-
+		public:
 			static constexpr int source_width = source_width_;
 
 			static constexpr int source_height = source_height_;
@@ -63,6 +56,15 @@ namespace lpin
 			static constexpr int convertCode = convertCode_;
 
 			static constexpr int interpolation = interpolation_;
+
+		protected:
+			/*
+				변환 관련 note
+
+				Stretch 및 레터박스 적용 안 함. 따라서 변환 도중 크기를 키울 때도 종횡비 차이에 따라 crop이 발생할 수 있음
+				Crop은 항상 중앙을 기준으로 두고 귀퉁이를 자름
+				항상 crop을 resize보다 먼저 함 - 극단적인 종횡비 변화에 취약하나 resize 속도가 빠른 편
+			*/
 
 			// convertCode가 음수가 아닌 경우 colorspace 변환 필요
 			static constexpr bool needToConvertColorspace = convertCode >= 0;
@@ -102,22 +104,22 @@ namespace lpin
 			}
 
 			// Crop -> ConvertColorspace
-			static cv::Mat Convert(cv::Mat origin) requires (needToConvertColorspace && needToCrop && !needToResize)
+			static cv::Mat Convert(cv::Mat source) requires (needToConvertColorspace && needToCrop && !needToResize)
 			{
 				cv::Mat recolored;
 
-				cv::cvtColor(origin(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), recolored, convertCode);
+				cv::cvtColor(source(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), recolored, convertCode);
 
 				return recolored;
 			}
 
 			// ConvertColorspace -> Resize
-			static cv::Mat Convert(cv::Mat origin) requires (needToConvertColorspace && !needToCrop && needToResize)
+			static cv::Mat Convert(cv::Mat source) requires (needToConvertColorspace && !needToCrop && needToResize)
 			{
 				cv::Mat recolored;
 				cv::Mat resized;
 
-				cv::cvtColor(origin, recolored, convertCode);
+				cv::cvtColor(source, recolored, convertCode);
 
 				cv::resize(recolored, resized, { target_width, target_height }, 0, 0, interpolation);
 
@@ -125,49 +127,50 @@ namespace lpin
 			}
 
 			// ConvertColorspace only
-			static cv::Mat Convert(cv::Mat origin) requires (needToConvertColorspace && !needToCrop && !needToResize)
+			static cv::Mat Convert(cv::Mat source) requires (needToConvertColorspace && !needToCrop && !needToResize)
 			{
 				cv::Mat recolored;
 
-				cv::cvtColor(origin, recolored, convertCode);
+				cv::cvtColor(source, recolored, convertCode);
 
 				return recolored;
 			}
 
 			// Crop -> Resize
-			static cv::Mat Convert(cv::Mat origin) requires (!needToConvertColorspace && needToCrop && needToResize)
+			static cv::Mat Convert(cv::Mat source) requires (!needToConvertColorspace && needToCrop && needToResize)
 			{
 				cv::Mat resized;
 
-				cv::resize(origin(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), resized, { target_width, target_height }, 0, 0, interpolation);
+				cv::resize(source(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), resized, { target_width, target_height }, 0, 0, interpolation);
 
 				return resized;
 			}
 
 			// Crop only
-			static cv::Mat Convert(cv::Mat origin) requires (!needToConvertColorspace && needToCrop && !needToResize)
+			static cv::Mat Convert(cv::Mat source) requires (!needToConvertColorspace && needToCrop && !needToResize)
 			{
-				return origin(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)).clone();
+				return source(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)).clone();
 			}
 
 			// Resize only
-			static cv::Mat Convert(cv::Mat origin) requires (!needToConvertColorspace && !needToCrop && needToResize)
+			static cv::Mat Convert(cv::Mat source) requires (!needToConvertColorspace && !needToCrop && needToResize)
 			{
 				cv::Mat resized;
 
-				cv::resize(origin, resized, { target_width, target_height }, 0, 0, interpolation);
+				cv::resize(source, resized, { target_width, target_height }, 0, 0, interpolation);
 
 				return resized;
 			}
 
 			// Clone only
-			static cv::Mat Convert(cv::Mat origin) requires (!needToConvertColorspace && !needToCrop && !needToResize)
+			static cv::Mat Convert(cv::Mat source) requires (!needToConvertColorspace && !needToCrop && !needToResize)
 			{
-				return origin.clone();
+				return source.clone();
 			}
 
 			static cv::Mat Convert(void *ptr) requires (source_type >= 0)
 			{
+                //std::cout<<"Convert ptr :"<<sizeof(ptr)<<"\n";
 				return Convert(cv::Mat{source_height, source_width, source_type, ptr});
 			}
 
@@ -190,16 +193,42 @@ namespace lpin
 			convertCode: Colorspace 변환 방식을 나타내는 값입니다. Constants<mode>에 선언된 멤버를 참조하여 지정해 주세요. Colorspace를 변환하지 않으려는 경우 음수로 지정해 주세요.
 			interpolation: Resize 방식을 나타내는 값입니다. Constants<mode>에 선언된 멤버를 참조하여 지정해 주세요.
 		*/
-		template <int target_width, int target_height,
-			int source_type, int convertCode, int interpolation> requires (target_width > 0 && target_height > 0)
-		class ImageConverter_Base<0, 0, target_width, target_height, source_type, convertCode, interpolation>
+		template <int target_width_, int target_height_,
+			int source_type_, int convertCode_, int interpolation_> requires (target_width_ > 0 && target_height_ > 0)
+		class ImageConverter_Base<0, 0, target_width_, target_height_, source_type_, convertCode_, interpolation_>
 		{
 		protected:
+			static_assert(target_width_ >= 0 && target_height_ >= 0,
+				"Invalid size parameter found during instantiating ImageConverter. "
+				"새 버전의 ImageConverter를 사용할 때 template 인수로 지정하는 이미지 가로/세로 길이는 음수가 아니어야 합니다. "
+				"코드의 이 부분(static_assert 선언이 있는 부분) 말고 가장 최근에 ImageConverter 인스턴스화를 시도한 코드를 확인해 주세요.");
+
+			static_assert((target_width_ > 0) == (target_height_ > 0),
+				"Invalid size parameter found during instantiating ImageConverter. "
+				"새 버전의 ImageConverter를 사용할 때 template 인수로 지정하는 이미지 가로/세로 길이는 둘 다 양수거나 둘 다 0이어야 합니다. "
+				"코드의 이 부분(static_assert 선언이 있는 부분) 말고 가장 최근에 ImageConverter 인스턴스화를 시도한 코드를 확인해 주세요.");
+
 			ImageConverter_Base() = delete;
 			ImageConverter_Base(const ImageConverter_Base &) = delete;
 			ImageConverter_Base(ImageConverter_Base &&) = delete;
 			~ImageConverter_Base() = delete;
 
+		public:
+			static constexpr int source_width = 0;
+
+			static constexpr int source_height = 0;
+
+			static constexpr int target_width = target_width_;
+
+			static constexpr int target_height = target_height_;
+
+			static constexpr int source_type = source_type_;
+
+			static constexpr int convertCode = convertCode_;
+
+			static constexpr int interpolation = interpolation_;
+
+		protected:
 			/*
 				변환 관련 note
 
@@ -213,13 +242,13 @@ namespace lpin
 
 		public:
 			// Crop(opt.) -> ConvertColorspace -> Resize(opt.)
-			static cv::Mat Convert(cv::Mat origin) requires needToConvertColorspace
+			static cv::Mat Convert(cv::Mat source) requires needToConvertColorspace
 			{
 				cv::Mat recolored;
 				cv::Mat resized;
 
-				int source_width = origin.cols;
-				int source_height = origin.rows;
+				int source_width = source.cols;
+				int source_height = source.rows;
 
 				// 종횡비가 서로 다른 경우 crop 필요
 				if ( (long long)source_width * target_height != (long long)target_width * source_height )
@@ -242,12 +271,12 @@ namespace lpin
 					// Crop 이후에는 종횡비가 동일해지므로 가로 길이만 보고 resize 여부 판단 가능
 					if ( width_afterCrop != target_width )
 					{
-						cv::cvtColor(origin(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), recolored, convertCode);
+						cv::cvtColor(source(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), recolored, convertCode);
 						cv::resize(recolored, resized, { target_width, target_height }, 0, 0, interpolation);
 					}
 					else
 					{
-						cv::cvtColor(origin(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), resized, convertCode);
+						cv::cvtColor(source(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), resized, convertCode);
 					}
 
 				}
@@ -256,13 +285,13 @@ namespace lpin
 					// Resize 여부 확인
 					if ( source_width != target_width || source_height != target_height )
 					{
-						cv::cvtColor(origin, recolored, convertCode);
+						cv::cvtColor(source, recolored, convertCode);
 
 						cv::resize(recolored, resized, { target_width, target_height }, 0, 0, interpolation);
 					}
 					else
 					{
-						cv::cvtColor(origin, resized, convertCode);
+						cv::cvtColor(source, resized, convertCode);
 					}
 				}
 
@@ -270,12 +299,12 @@ namespace lpin
 			}
 
 			// Crop(opt.) -> Resize(opt.)
-			static cv::Mat Convert(cv::Mat origin) requires (!needToConvertColorspace)
+			static cv::Mat Convert(cv::Mat source) requires (!needToConvertColorspace)
 			{
 				cv::Mat resized;
 
-				int source_width = origin.cols;
-				int source_height = origin.rows;
+				int source_width = source.cols;
+				int source_height = source.rows;
 
 				// 종횡비가 서로 다른 경우 crop 필요
 				if ( (long long)source_width * target_height != (long long)target_width * source_height )
@@ -298,11 +327,11 @@ namespace lpin
 					// Crop 이후에는 종횡비가 동일해지므로 가로 길이만 보고 resize 여부 판단 가능
 					if ( width_afterCrop != target_width )
 					{
-						cv::resize(origin(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), resized, { target_width, target_height }, 0, 0, interpolation);
+						cv::resize(source(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)), resized, { target_width, target_height }, 0, 0, interpolation);
 					}
 					else
 					{
-						resized = origin(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)).clone();
+						resized = source(cv::Range(y0_crop, y1_crop), cv::Range(x0_crop, x1_crop)).clone();
 					}
 
 				}
@@ -311,11 +340,11 @@ namespace lpin
 					// Resize 여부 확인
 					if ( source_width != target_width || source_height != target_height )
 					{
-						cv::resize(origin, resized, { target_width, target_height }, 0, 0, interpolation);
+						cv::resize(source, resized, { target_width, target_height }, 0, 0, interpolation);
 					}
 					else
 					{
-						resized = origin.clone();
+						resized = source.clone();
 					}
 				}
 
@@ -340,8 +369,8 @@ namespace lpin
 			convertCode: Colorspace 변환 방식을 나타내는 값입니다. Constants<mode>에 선언된 멤버를 참조하여 지정해 주세요. Colorspace를 변환하지 않으려는 경우 음수로 지정해 주세요.
 			interpolation_notUsed: Resize 방식을 나타내는 값입니다. 이 버전에서는 사용하지 않습니다. 아무 값이나 지정해도 됩니다.
 		*/
-		template <int source_type, int convertCode, int interpolation_notUsed>
-		class ImageConverter_Base<0, 0, 0, 0, source_type, convertCode, interpolation_notUsed>
+		template <int source_type_, int convertCode_, int interpolation_notUsed>
+		class ImageConverter_Base<0, 0, 0, 0, source_type_, convertCode_, interpolation_notUsed>
 		{
 		protected:
 			ImageConverter_Base() = delete;
@@ -349,6 +378,22 @@ namespace lpin
 			ImageConverter_Base(ImageConverter_Base &&) = delete;
 			~ImageConverter_Base() = delete;
 
+		public:
+			static constexpr int source_width = 0;
+
+			static constexpr int source_height = 0;
+
+			static constexpr int target_width = 0;
+
+			static constexpr int target_height = 0;
+
+			static constexpr int source_type = source_type_;
+
+			static constexpr int convertCode = convertCode_;
+
+			static constexpr int interpolation = -1;
+
+		protected:
 			/*
 				변환 관련 note
 
@@ -362,19 +407,19 @@ namespace lpin
 
 		public:
 			// ConvertColorspace only
-			static cv::Mat Convert(cv::Mat origin) requires needToConvertColorspace
+			static cv::Mat Convert(cv::Mat source) requires needToConvertColorspace
 			{
 				cv::Mat recolored;
 
-				cv::cvtColor(origin, recolored, convertCode);
+				cv::cvtColor(source, recolored, convertCode);
 
 				return recolored;
 			}
 
 			// Clone only
-			static cv::Mat Convert(cv::Mat origin) requires (!needToConvertColorspace)
+			static cv::Mat Convert(cv::Mat source) requires (!needToConvertColorspace)
 			{
-				return origin.clone();
+				return source.clone();
 			}
 
 			static cv::Mat Convert(void *ptr, int width, int height) requires (source_type >= 0)

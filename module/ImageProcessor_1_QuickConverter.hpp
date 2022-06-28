@@ -1,12 +1,14 @@
 #pragma once
 
-#include <iostream>
+#include "ImageProcessor_Base.hpp"
+
+#include "Constants.hpp"
+#include "ImageConverter.hpp"
+
 #include <queue>
 #include <thread>
 #include <mutex>
 #include <semaphore>
-
-#include "ImageProcessor_Base.hpp"
 
 namespace lpin
 {
@@ -35,14 +37,30 @@ namespace lpin
 			using ImageConverter_In = DefaultImageConverter_In<Constants::img_output_width, Constants::img_output_height, Constants::convertToGrayscale>;
 			using ImageConverter_Out = DefaultImageConverter_Out<Constants::img_output_width, Constants::img_output_height, Constants::img_output_width, Constants::img_output_height, Constants::convertToGrayscale>;
 
+// LLVM library issue: 나중에 아래 조건을 LLVM에서도 만족하게 된 경우 수정해 주세요.
+#if __cpp_lib_jthread >= 201911L
+			using Thread_t = std::jthread;
+#else
+			using Thread_t = std::thread;
+			bool isStopRequested = false;
+#endif
+
 			struct TaskInfo
 			{
 				Constants::ID_t id;
 				cv::Mat img;
+
+				TaskInfo() : id{ -1 }, img{} { }
+				TaskInfo(Constants::ID_t id, cv::Mat &&img) : id{id}, img{img} { }
+				TaskInfo(const TaskInfo &) = default;
+				TaskInfo(TaskInfo &&) noexcept = default;
+				~TaskInfo() noexcept = default;
+
+				TaskInfo &operator =(const TaskInfo &) = default;
+				TaskInfo &operator =(TaskInfo &&) noexcept = default;
 			};
 
-
-			std::jthread thrs_worker[Constants::numberOfWorkerThreads];
+			Thread_t thrs_worker[Constants::numberOfWorkerThreads];
 
 			Constants::ID_t id_next{};
 
@@ -54,6 +72,8 @@ namespace lpin
 			std::mutex m_queue_out;
 			std::counting_semaphore<> smph_queue_out{ 0 };
 			
+// LLVM library issue: 나중에 아래 조건을 LLVM에서도 만족하게 된 경우 수정해 주세요.
+#if __cpp_lib_jthread >= 201911L
 			template <bool skipOutwardConversion = Constants::skipOutwardConversion>
 			static void run_worker(std::stop_token token, ImageProcessor<1> &self)
 			{
@@ -124,16 +144,7 @@ namespace lpin
 				}
 			}
 
-		public:
-			ImageProcessor()
-			{
-				for ( int idx = 0; idx < Constants::numberOfWorkerThreads; idx++ )
-				{
-					thrs_worker[idx] = std::jthread{ run_worker<>, std::ref(*this) };
-				}
-			}
-
-			~ImageProcessor() noexcept
+			void finalize() noexcept
 			{
 				for ( auto &thr : thrs_worker )
 				{
@@ -152,6 +163,109 @@ namespace lpin
 						thr.join();
 					}
 				}
+			}
+
+#else
+
+			template <bool skipOutwardConversion = Constants::skipOutwardConversion>
+			static void run_worker(ImageProcessor<1> &self)
+			{
+				TaskInfo info;
+
+				while ( !self.isStopRequested )
+				{
+					self.smph_queue_in.acquire();
+
+					if ( self.isStopRequested )
+					{
+						self.smph_queue_in.release();
+						break;
+					}
+
+					std::unique_lock lock_queue_in{ self.m_queue_in };
+					info = self.queue_in.front();
+					self.queue_in.pop();
+					lock_queue_in.unlock();
+
+					info.img = ImageConverter_In::Convert(info.img);
+
+					if ( self.isStopRequested )
+					{
+						break;
+					}
+
+					std::unique_lock lock_queue_out{ self.m_queue_out };
+					self.queue_out.emplace(std::move(info));
+					lock_queue_out.unlock();
+
+					self.smph_queue_out.release();
+				}
+			}
+
+			template <>
+			static void run_worker<false>(ImageProcessor<1> &self)
+			{
+				TaskInfo info;
+
+				while ( !self.isStopRequested )
+				{
+					self.smph_queue_in.acquire();
+
+					if ( self.isStopRequested )
+					{
+						self.smph_queue_in.release();
+						break;
+					}
+
+					std::unique_lock lock_queue_in{ self.m_queue_in };
+					info = std::move(self.queue_in.front());
+					self.queue_in.pop();
+					lock_queue_in.unlock();
+
+					info.img = ImageConverter_Out::Convert(ImageConverter_In::Convert(info.img));
+
+					if ( self.isStopRequested )
+					{
+						break;
+					}
+
+					std::unique_lock lock_queue_out{ self.m_queue_out };
+					self.queue_out.emplace(std::move(info));
+					lock_queue_out.unlock();
+
+					self.smph_queue_out.release();
+				}
+			}
+
+			void finalize() noexcept
+			{
+				isStopRequested = true;
+
+				smph_queue_in.release(Constants::numberOfWorkerThreads);
+
+				for ( auto &thr : thrs_worker )
+				{
+					if ( thr.joinable() )
+					{
+						thr.join();
+					}
+				}
+			}
+
+#endif
+
+		public:
+			ImageProcessor()
+			{
+				for ( int idx = 0; idx < Constants::numberOfWorkerThreads; idx++ )
+				{
+					thrs_worker[idx] = Thread_t{ run_worker<>, std::ref(*this) };
+				}
+			}
+
+			~ImageProcessor() noexcept
+			{
+				finalize();
 			}
 
 			int PutSourceImage(cv::Mat mat)
@@ -197,7 +311,7 @@ namespace lpin
 					return result;
 				}
 
-				return { -1, {} };
+				return {};
 			}
 		};
 	}

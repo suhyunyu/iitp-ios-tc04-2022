@@ -33,28 +33,39 @@
 }
 
 + (int) processModule{
+//    NSLog(@"processModule()");
     //[NSThread sleepForTimeInterval:1.00];
     int result = lpin::opencv::Process();
     return result;
 }
 
 + (const char *) getPtrOfStringModule:(int) requestCode{
+//    NSLog(@"getPtrOfStringModule()");
     //[NSThread sleepForTimeInterval:0.10];
     const char *result = lpin::opencv::GetPtrOfString(requestCode);
+       
+    
     return result;
 }
 
 
 + (int) putByteBlockModule: (NSData *) data{//:(char *) data (int) length{
     //printf(data);
+//    NSLog(@"putByteBlockModule()");
     
     char *bytePtr = (char *)[data bytes];
     int result = lpin::opencv::PutByteBlock(bytePtr);
+//    NSUInteger len = [data length];
+//    Byte *byteData = (Byte*)malloc(len);
+//    memcpy(byteData, [data bytes], len);
+//    std::cout<<"byteData: "<<byteData<<"\n";
+    
     return 0;
 }
 
 // UIImage를 unsigned char*, width, height를 C++ 모듈로 전달
 + (int) putImageModule:(UIImage *)image{
+//    NSLog(@"putImageModule()");
     CGImageRef imageRef = image.CGImage;
     // Create a bitmap context to draw the uiimage into
     CGContextRef context = [self newBitmapRGBA8ContextFromImage:imageRef];
@@ -67,7 +78,7 @@
     size_t height = CGImageGetHeight(imageRef);
 
     CGRect rect = CGRectMake(0, 0, width, height);
-    
+
      //Draw image into the context to get the raw image data
     CGContextDrawImage(context, rect, imageRef);
 
@@ -79,27 +90,31 @@
     size_t bufferLength = bytesPerRow * height;
 
     char *newBitmap = NULL;
-    
+
     if(bitmapData) {
         newBitmap = (char *)malloc(sizeof(unsigned char) * bytesPerRow * height);
-        
+
         if(newBitmap) {    // Copy the data
             for(int i = 0; i < bufferLength; ++i) {
                 newBitmap[i] = bitmapData[i];
             }
         }
-        
+
         free(bitmapData);
-        
+
     } else {
         NSLog(@"Error getting bitmap pixel data\n");
     }
     
-    CGContextRelease(context);
-    
-    
     int putImageResult = lpin::opencv::PutImage(newBitmap);
-    //, width, height);
+
+//    int putImageResult = 0;
+    
+    CGContextRelease(context);
+    image = NULL;
+    
+    imageRef = NULL;
+    free(newBitmap);//, width, height);
     
     return putImageResult;
     

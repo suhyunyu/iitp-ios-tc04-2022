@@ -8,6 +8,13 @@
 //#define JNI
 #define IOS
 
+#ifdef JNI
+
+// Android에서 LOG(...) 사용하기 위해 필요한 내용
+#include <android/log.h>
+#define LOG(...) __android_log_print(ANDROID_LOG_INFO   , "libnav", __VA_ARGS__)
+
+#endif
 
 namespace lpin
 {

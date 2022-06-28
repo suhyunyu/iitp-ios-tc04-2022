@@ -1,6 +1,13 @@
 #pragma once
 
 #include "ImageProcessor_Base.hpp"
+
+#include "Constants.hpp"
+#include "ImageCache.hpp"
+#include "ImageConverter.hpp"
+#include "ImageConverter_HistogramEqualizer.hpp"
+#include "ImageComparator_3.hpp"
+
 #include <limits>
 
 namespace lpin
@@ -39,7 +46,8 @@ namespace lpin
 
 			using Constants = Constants<3>;
 			using ImageConverter = ImageConverter_Base<Constants::img_input_width, Constants::img_input_height, Constants::img_input_width, Constants::img_input_height, Constants::external_img_type, Constants::img_convertCode_in_grayscale, 0>;
-			//using ImageComparator = ImageComparator<3>;
+//			using ImageConverter_HistogramEqualizer = ImageConverter_HistogramEqualizer<>;
+			using ImageComparator = ImageComparator<3>;
 			using ImageCache = ImageCache<2>;
 
 			static inline ImageCache cache;
@@ -49,6 +57,8 @@ namespace lpin
 			static inline double horizontalDistance_base;
 			static inline double height_base;
 			static inline double angle_base;
+
+			static inline ImageComparator comparator;
 
 		public:
 			static int Reset()
@@ -60,20 +70,29 @@ namespace lpin
 
 			static int PutBaseImage(void *bitmap)
 			{
+//                std::cout<<":: PutBaseImage bitmap:"<<bitmap<<"\n";
 				cache[idx_img_base] = ImageConverter::Convert(bitmap);
-
+//                std::cout<<"cache[idx_img_base] :"<<sizeof(cache[idx_img_base])<<"\n";
+				comparator.PutImage<ImageComparator::idx_img_base>(cache[idx_img_base]);
+//                std::cout<<"idx_img_base:"<<idx_img_base<<"\n";
+//                std::cout<<"cache:"<<sizeof(cache)<<"\n";
 				return 0;
 			}
 
 			static int PutQueryImage(void *bitmap)
 			{
 				cache[idx_img_query] = ImageConverter::Convert(bitmap);
+				comparator.PutImage<ImageComparator::idx_img_query>(cache[idx_img_query]);
 
 				return 0;
 			}
 
 			static int PutMetadata(double horizontalDistance_base, double height_base, double angle_base)
 			{
+//                std::cout<<"horizontalDistance_base: "<<horizontalDistance_base<<" ";
+//                std::cout<<"height_base: "<<height_base<<" ";
+//                std::cout<<"angle_base: "<<angle_base<<"\n";
+//                
 				ImageProcessor::horizontalDistance_base = horizontalDistance_base;
 				ImageProcessor::height_base = height_base;
 				ImageProcessor::angle_base = angle_base;
@@ -83,7 +102,7 @@ namespace lpin
 
 			static double CalculateDistance()
 			{
-				return std::numeric_limits<double>::quiet_NaN();
+				return comparator.CalculateDistance(horizontalDistance_base, height_base, angle_base);
 			}
 		};
 	}

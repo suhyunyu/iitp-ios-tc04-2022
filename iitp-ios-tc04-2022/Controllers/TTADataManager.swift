@@ -75,15 +75,28 @@ class TTADataManager{
         
         //url에 정확한 이미지 url 주소를 넣는다.
 //        guard let url = URL(string: ) else { return }
-        let dataTask = URLSession.shared.dataTask(with: url, completionHandler: { data, response ,error in
-            guard let data = data, error == nil else{
+        //URLSession.shared.configuration.timeoutIntervalForRequest = 3600
+        //URLSession.shared.configuration.timeoutIntervalForResource
+        
+        
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "GET"
+        urlRequest.timeoutInterval = TimeInterval(3600)
+        urlRequest.httpBody = Data()
+
+        let dataTask = URLSession.shared.dataTask(with: urlRequest, completionHandler: { data, response ,error in
+        
+            guard let data = data, error == nil,
+                  let response = response as? HTTPURLResponse,
+                  response.statusCode >= 200 && response.statusCode < 300
+            else{
                 completion(nil,error)
                 return
             }
             
             let image = UIImage(data: data)
             
-            //url에서 이미지 이름 추출
+            //make file name from url
             let urlString = url.absoluteString
             let arr = urlString.components(separatedBy: "/")
             let fileName: String = arr[arr.count-1]
@@ -106,6 +119,7 @@ class TTADataManager{
         
     }
     
+    
     //이미지 읽어오기
     func readImage(named: String) -> UIImage? {
         if let dir: URL
@@ -117,14 +131,16 @@ class TTADataManager{
             = URL(fileURLWithPath: dir.absoluteString)
                 .appendingPathComponent(named).path
           let image: UIImage? = UIImage(contentsOfFile: path)
-          
           return image
+//            readImagefile = nil
+//            readImagefile = UIImage.init(contentsOfFile: path)
+//            return readImagefile
         }
         return nil
     }
     
     // csv 파일 저장
-    //func writeCSV(from recArray:[Dictionary<String, AnyObject>]) -> URL?{
+    //func writeCSV(from recArray:[Dictionary<String, AnyObject>]) -> URL?{
     func writeCSV(from reusltCsv:String) -> URL?{
         let now = Date()
         

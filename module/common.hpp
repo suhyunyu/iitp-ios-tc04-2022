@@ -1,5 +1,7 @@
 #pragma once
+
 #include "topmost.hpp"
+
 #if LPIN_OPENCV_MODE == 3
 
 #include "ImageProcessor_3_DistanceCalculator.hpp"
