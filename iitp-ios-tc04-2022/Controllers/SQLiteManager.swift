@@ -233,11 +233,16 @@ class SQLiteManager{
         var stmt: OpaquePointer?
         
         
-        var currentTestCount = self.readCountData()+1
+        var currentTestCount = self.readCountData()
+        var updateCount  = 0
+        
+        if(currentTestCount < 4){
+            updateCount = currentTestCount+1
+        }
         
         // 등호 기호는 =이 아니라 ==이다.
         // string 부분은 작은 따옴표 두 개로 감싸줘야 한다.
-        let queryString = "UPDATE Ttacount SET test_count = '\(currentTestCount)'"
+        let queryString = "UPDATE Ttacount SET test_count = '\(updateCount)'"
         
         // 쿼리 준비.
         if sqlite3_prepare(db, queryString, -1, &stmt, nil) != SQLITE_OK {

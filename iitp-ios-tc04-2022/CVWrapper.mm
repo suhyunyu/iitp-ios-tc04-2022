@@ -50,16 +50,10 @@
 
 
 + (int) putByteBlockModule: (NSData *) data{//:(char *) data (int) length{
-    //printf(data);
-//    NSLog(@"putByteBlockModule()");
-    
+
     char *bytePtr = (char *)[data bytes];
     int result = lpin::opencv::PutByteBlock(bytePtr);
-//    NSUInteger len = [data length];
-//    Byte *byteData = (Byte*)malloc(len);
-//    memcpy(byteData, [data bytes], len);
-//    std::cout<<"byteData: "<<byteData<<"\n";
-    
+
     return 0;
 }
 
@@ -111,8 +105,8 @@
 //    int putImageResult = 0;
     
     CGContextRelease(context);
+    //CGImageRelease(imageRef);
     image = NULL;
-    
     imageRef = NULL;
     free(newBitmap);//, width, height);
     

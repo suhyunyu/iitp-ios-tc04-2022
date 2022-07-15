@@ -9,6 +9,7 @@ import UIKit
 import UniformTypeIdentifiers
 import MobileCoreServices
 
+
 class MainViewController: UIViewController, UIDocumentPickerDelegate {
    
     @IBOutlet weak var NaviBar: UINavigationBar!
@@ -68,6 +69,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         //loadDataButton.titleLabel?.adjustsFontSizeToFitWidth = true
         
         testStartButton.titleLabel?.textAlignment = .center
+        testStartButton.titleLabel?.lineBreakMode = .byWordWrapping
         
         shareResultButton.setTitle("시험결과\n내보내기", for: .normal)
         shareResultButton.titleLabel?.textAlignment = .center
@@ -104,25 +106,8 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         
     }
     
-//    private func addNaviBar() {
-//
-//            // safe area
-//            var statusBarHeight: CGFloat = 0
-//            statusBarHeight = UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0
-//
-//            // navigationBar
-//            let naviBar = UINavigationBar(frame: .init(x: 0, y: statusBarHeight, width: view.frame.width, height: statusBarHeight))
-//            naviBar.isTranslucent = false
-//            naviBar.backgroundColor = .systemBackground
-//
-//            let naviItem = UINavigationItem(title: "TC04")
-////            naviItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(didTapDoneButton))
-//            naviBar.items = [naviItem]
-//
-//            view.addSubview(naviBar)
-//    }
     
-    
+    //버튼 다중클릭방지
     var loadDataAction = false
     // 데이터 가져오기
     @IBAction func onClickLoadData(_ sender: Any) {
@@ -138,6 +123,8 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         let baseUrl = "https://22tta.lfin.kr/data"
         //guard let url = URL(string: baseUrl+"/json/queryPlan_v1.json") else { return }
         guard let url = URL(string: baseUrl+"/json/queryPlan_v1_10000.json") else { return }
+        
+        baseImageview.image = nil
    
         ttaDataManager.loadImageJsonData(fromURL: url)
         { data, error in
@@ -164,7 +151,8 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
             //이미지 다운로드
             let ttaTable = self.sqliteManager.readData()
             
-            var imgList = Set<String>()
+            var imgList = Set<String>()     //다운로드할 이미지 목록 저장
+            var downloadFailImgList = Set<String>() //다운로드 실패한 이미지 목록 저장
             
             //다운로드할 이미지 목록 생성
             for row in ttaTable{
@@ -174,14 +162,23 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
             //print(imgList)
             
             DispatchQueue.global().async { [weak self] in
-                var i = 0 //실행 횟수
-                var loadCount = 0 //다운로드 성공한 이미지 카운트
+                var i = 1 //실행 횟수
                 var failCount = 0 //다운로드 실패한 카운트
+                var loadCount = 1 //다운로드 성공한 이미지 카운트
                 let rowCount = imgList.count
+                
+                let numberFormatter = NumberFormatter()
+                numberFormatter.numberStyle = .decimal
+                
+                self?.ttaDataManager.removeImageFolder()
+//                let ImageFileCount = self?.ttaDataManager.countImageFiles() ?? 0
+//                print("Images Folder make empty(ImageFileCount : \(ImageFileCount))")
+                
+                
+                
                 for img in imgList{
-                    
+
                     // usleep(1000000) will sleep for 1 second
-                    //usleep(1000)
                     
                     guard let imageUrl = URL(string: "\(baseUrl)/images/tc04/\(img)") else { return }
                     self?.ttaDataManager.loadImage(fromURL : imageUrl){ data, error in
@@ -189,46 +186,60 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                         
                         guard let data = data,error == nil else{
                             print("image download error: \(error)")
+                            downloadFailImgList.insert(img)
                             return
                         }
                         
                         DispatchQueue.main.async {
                             i += 1
                             if let imageData = UIImage(data: data){
-                                loadCount += 1
-                                print("입력 데이터 불러오는 중...(\(loadCount)/\(rowCount))")
                                 
-                                if(i<rowCount){
-                                    self?.stateLabel.text = "입력 데이터 불러오는 중...(\(loadCount)/\(rowCount))"
+                                //ImageFileCount = self?.ttaDataManager.countImageFiles() ?? 0
+                                
+                                var formatLoadCount = numberFormatter.string(from: NSNumber(value:loadCount))
+                                var formatRowCount = numberFormatter.string(from: NSNumber(value:rowCount))
+                                
+                                print("이미지 파일 (\(loadCount)/\(rowCount)) 다운로드 중...")
+                                
+                                if(loadCount < rowCount){
+                                    loadCount += 1
+                                    self?.stateLabel.text = "이미지 파일 (\(formatLoadCount!)/\(formatRowCount!))\n다운로드 중..."
                                     self?.baseImageview.image = imageData
-                                
                                     
-                                }else if(i == rowCount){
-                                    self?.stateLabel.text = "데이터 준비 완료(\(loadCount)/\(rowCount))"
+                                    
+                                    let count = loadCount+downloadFailImgList.count
+                                    if(count >= rowCount && downloadFailImgList.count != 0){
+                                        let ImageFileCount = self?.ttaDataManager.countImageFiles() ?? 0
+                                        
+                                        formatLoadCount = numberFormatter.string(from: NSNumber(value:ImageFileCount))
+                                        formatRowCount = numberFormatter.string(from: NSNumber(value:rowCount))
+                                        print("image save fail:\(ImageFileCount)")
+                                        self?.stateLabel.text = "데이터 준비 현황(\(formatLoadCount!)/\(formatRowCount!))"
+                                        self?.nextStepLabel.text = "데이터 가져오기(재실행)"
+                                        self?.baseImageview.image = nil
+                                        
+                                    }
+                                }
+                                else if(loadCount == rowCount){
+                                    self?.stateLabel.text = "데이터 준비 완료(\(formatLoadCount!)/\(formatRowCount!))"
                                     self?.loadDataButton.setTitle("데이터\n가져오기 ✅", for: .normal)
+                                    self?.nextStepLabel.text = "시험 시작"
+                                    self?.baseImageview.image = nil
                                 }
+                                
                             }
-                            else{
-                                failCount += 1
-                                print("image save error")
-                                if(i == rowCount){
-                                    print("image save fail: \(failCount)")
-                                    self?.stateLabel.text = "데이터 준비 현황(\(loadCount)/\(rowCount))"
-                                    self?.nextStepLabel.text = "데이터 가져오기(재실행)"
-                                }
-                            }
-                            
-                            
                         }
+                        
 
                     }
                     
                 }
                 
-
-               
+                
+        
                 
             }
+
             self.loadDataAction = false
             
         }
@@ -243,14 +254,15 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
     
     // 시험시작
     @IBAction func onClickStarTest(_ sender: Any) {
-        print("onClickStarTest : \(startTestRunState)")
+
+        
         if startTestRunState == true { return }
         startTestRunState = true
         
         
         stateLabel.text = "시험 중.."
-        nextStepLabel.text = "시험결과 내보내기"
         LogTextview.text  = ""
+        nextStepLabel.text = "시험시작"
         
         //데이터 테이블 조회
         let ttaTestTable = self.sqliteManager.readData()
@@ -259,17 +271,20 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         //데이터 테이블 조회
         let ttaTable = self.sqliteManager.readData()
         if ttaTable.count > 0 {
-            
+            //시작시간
+            let startTime = CFAbsoluteTimeGetCurrent()
             
             //모듈이 동작할 스레드
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                
+                //self?.ttaDataManager.clearCache()
                 
                 let statrState = CVWrapper.start()
                 print("start \(statrState)")
                 
                 var statesMessage = "No Message"
                 statesMessage = String(cString:CVWrapper.getPtrOfStringModule(0))
-                print("2 :: ",statesMessage)
+//                print("2 :: ",statesMessage)
                 DispatchQueue.main.async { [weak self] in
                     self?.stateLabel.text = statesMessage
                 }
@@ -328,18 +343,18 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                             self?.baseImageLabel.text = row.bFileName
                             self?.queryImageview.image = self?.ttaDataManager.readImage(named: row.qFileName)
                             self?.queryImageLabel.text = row.qFileName
-                            
+
                             //로그 표시
                             self?.LogTextview.insertText(logString + "\n")
                             // 텍스트 추가시 스크롤 내리기
-                            if(rowCount>=5){
+                            if(rowCount>=5){ //처음 로그 표시할때는 실행 안함
                                 let point = CGPoint(x: 0.0, y: ((self?.LogTextview.contentSize.height)! - (self?.LogTextview.bounds.height)!))
                                 self?.LogTextview.setContentOffset(point, animated: true)
-                                
-                            }
 
+                            }
                         }
                     }
+
                     rowCount += 1
                 }
                     
@@ -353,13 +368,28 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                     
                     //[시험시작]버튼에 시험 횟수 표시
                     self?.sqliteManager.updateData()
-                    var testCount = self?.sqliteManager.readCountData()
-                    self?.testStartButton.setTitle("시험시작\n(\(testCount!))", for: .normal)
+                    var testCount = (self?.sqliteManager.readCountData())!
+                    //self?.testStartButton.setTitle("시험시작\n(\(testCount!))", for: .normal)
                     
                     //진행상태
-                    self?.stateLabel.text = "시험 완료"
-                    //다음 지시사항
-                    self?.nextStepLabel.text = "시험결과 내보내기"
+                    self?.stateLabel.text = "\(testCount)번째 시험 완료"
+                    self?.testStartButton.setTitle("시험시작", for: .normal)
+                    
+                    if(testCount == 3){
+                        //다음 지시사항
+                        //self?.ttaDataManager.updateData(0)
+                        self?.nextStepLabel.text = "시험결과 내보내기"
+                        self?.testStartButton.setTitle("시험시작\n✅", for: .normal)
+                    }
+                    
+                    self?.baseImageview.image = nil
+                    self?.baseImageLabel.text = ""
+                    self?.queryImageview.image = nil
+                    self?.queryImageLabel.text = ""
+                    
+                    //끝나는 시간
+                    let durationTime = CFAbsoluteTimeGetCurrent() - startTime
+                    print("경과 시간: \(durationTime)")
                     
                     //텍스트 추가시 스크롤 내리기
 //                    if self?.LogTextview.text.count ?? 0 > 0 {
@@ -369,6 +399,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
 //
 //                    }
                 }
+                
                 self?.startTestRunState = false
             }
             
@@ -378,6 +409,8 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
             nextStepLabel.text = "데이터 가져오기"
             startTestRunState = false
         }
+        
+        //ttaDataManager.clearCache()
             
     }
     

@@ -79,9 +79,8 @@
                                     <constraint firstAttribute="height" constant="70" id="iPo-2g-9lP"/>
                                 </constraints>
                                 <state key="normal" title="Button"/>
-                                <buttonConfiguration key="configuration" style="filled" title="시험시작" titleAlignment="center">
+                                <buttonConfiguration key="configuration" style="plain" title="시험시작" titleAlignment="center">
                                     <color key="baseForegroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                    <color key="baseBackgroundColor" systemColor="systemBlueColor"/>
                                 </buttonConfiguration>
                                 <connections>
                                     <action selector="onClickStarTest:" destination="BYZ-38-t0r" eventType="touchUpInside" id="p9R-Jb-xji"/>
@@ -95,9 +94,8 @@
                                     <constraint firstAttribute="width" constant="100" id="fqZ-xs-CLL"/>
                                 </constraints>
                                 <state key="normal" title="Button"/>
-                                <buttonConfiguration key="configuration" style="filled" title="시험결과 내보내기" titleAlignment="center">
+                                <buttonConfiguration key="configuration" style="plain" title="시험결과 내보내기" titleAlignment="center">
                                     <color key="baseForegroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                    <color key="baseBackgroundColor" systemColor="systemBlueColor"/>
                                 </buttonConfiguration>
                                 <connections>
                                     <action selector="onClickSahreTest:" destination="BYZ-38-t0r" eventType="touchUpInside" id="kpj-j6-eiJ"/>

@@ -9,10 +9,11 @@ import Foundation
 import UIKit
 
 
-class TTADataManager{
-    
+class TTADataManager: NSObject{
     
     @Published var posts: [TC04Base64] = []
+    
+
     
     // 출력할 이미지 정보 json으로 받아오기
     func loadImageJsonData(fromURL url : URL ,completion: @escaping(_ data: TC04List?,_ error: Error?) -> Void){
@@ -101,11 +102,27 @@ class TTADataManager{
             let arr = urlString.components(separatedBy: "/")
             let fileName: String = arr[arr.count-1]
             
+            
+            let filemanager = FileManager.default
+            // csv 파일 저장
+            let documents = filemanager.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let directoryURL = documents.appendingPathComponent("Images")
+            
+            //폴더생성
+            do{
+                try filemanager.createDirectory(atPath: directoryURL.path, withIntermediateDirectories: false, attributes: nil)
+            }catch let e{
+                
+                //print(e.localizedDescription)
+            }
+                        
             // Save Image
             do{
-                if let jpgData = image?.jpegData(compressionQuality: 0.5),
-                   let path = self.documentDirectoryPath()?.appendingPathComponent(fileName) {
-                    try? jpgData.write(to: path)
+                
+                if let jpgData = image?.jpegData(compressionQuality: 0.5){
+                   //let path = self.documentDirectoryPath()?.appendingPathComponent(fileName) {
+                    let path = directoryURL.appendingPathComponent(fileName)
+                    try jpgData.write(to: path)
                     completion(data, nil)
                 }
                 
@@ -119,6 +136,21 @@ class TTADataManager{
         
     }
     
+    func removeImageFolder(){
+        
+        let filemanager = FileManager.default
+        // csv 파일 저장
+        let documents = filemanager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let directoryURL = documents.appendingPathComponent("Images")
+        
+        do{
+            try? FileManager.default.removeItem(at: directoryURL)
+        }
+        catch{
+            print("remove error")
+        }
+    }
+    
     
     //이미지 읽어오기
     func readImage(named: String) -> UIImage? {
@@ -129,12 +161,10 @@ class TTADataManager{
                                          create: false) {
           let path: String
             = URL(fileURLWithPath: dir.absoluteString)
-                .appendingPathComponent(named).path
-          let image: UIImage? = UIImage(contentsOfFile: path)
-          return image
-//            readImagefile = nil
-//            readImagefile = UIImage.init(contentsOfFile: path)
-//            return readImagefile
+                .appendingPathComponent("Images/"+named).path
+            
+            let image: UIImage? = UIImage.init(contentsOfFile: path)
+            return image
         }
         return nil
     }
@@ -223,6 +253,43 @@ class TTADataManager{
         let fileName: String = arr[arr.count-1]
         
         return fileName
+    }
+    
+    
+    
+    func countImageFiles()->Int{
+        
+        do {
+            // Get the document directory url
+            let documentDirectory = try FileManager.default.url(
+                for: .documentDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+            
+            let directoryURL = documentDirectory.appendingPathComponent("Images")
+            
+            
+            //print("documentDirectory", directoryURL.path)
+            // Get the directory contents urls (including subfolders urls)
+            let directoryContents = try FileManager.default.contentsOfDirectory(
+                at: directoryURL,
+                includingPropertiesForKeys: nil
+            )
+
+//            for url in directoryContents {
+//                print(url)
+//            }
+            
+            return directoryContents.count
+            
+            
+        } catch {
+            print(error)
+        }
+        
+        return 0
     }
     
 }

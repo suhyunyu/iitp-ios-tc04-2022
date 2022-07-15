@@ -129,28 +129,54 @@ int lpin::opencv::Initialize(int taskCode)
 
 int lpin::opencv::PutImage(void *bitmap)
 {
+//    std::cout<<"PutImage()\n";
+//    std::cout<<"bitmap size"<<sizeof(bitmap)<<"\n";
+//    std::cout<<"state_old :"<<state_old<<", "<<sizeof(state_old)*8<<"\n";
+//    std::cout<<"state :"<<state_old<<", "<<sizeof(state)*8<<"\n";
+//    std::cout<<"bitmap :"<<sizeof(bitmap)<<"\n";
+    
+    
 	if ( state != ::Constants::WaitFor_BaseImage && state != ::Constants::WaitFor_QueryImage )
 	{
+//        std::cout<<"if ( state != ::Constants::WaitFor_BaseImage && state != ::Constants::WaitFor_QueryImage )\n";
 		length_status = std::sprintf(buffer_status, Format(Status_PutImage_Failed), count_trials);
+//        std::cout<<"length_status"<<length_status<<",";
+//        std::cout<<"length_status"<<sizeof(length_status)<<" ";
 		return -1;
 	}
 
 	if ( state == ::Constants::WaitFor_BaseImage )
 	{
+//        std::cout<<"if ( state == ::Constants::WaitFor_BaseImage )\n";
 		state_old = state;
 		state = ::Constants::Busy;
+        
+//        std::cout<<"state_old :"<<sizeof(state_old)*8<<"\n";
+//        std::cout<<"state :"<<sizeof(state)*8<<"\n";
+//        std::cout<<"bitmap :"<<sizeof(bitmap)<<"\n";
 
 		int ret = ::ImageProcessor::PutBaseImage(bitmap);
+//        std::cout<<"ret :"<<sizeof(ret)*8<<"\n";
+        
 
 		if ( ret != 0 )
 		{
+//            std::cout<<"ret:"<<ret<<"\n";
 			length_status = std::sprintf(buffer_status, Format(Status_PutImage_Failed), count_trials);
 			state = state_old;
+//            std::cout<<"buffer_status :"<<sizeof(buffer_status)<<",";
+//            std::cout<<"length_status :"<<sizeof(length_status)<<" ";
+//            std::cout<<"length_status"<<length_status<<",";
+//            std::cout<<"length_status"<<sizeof(length_status)<<" ";
+//            std::cout<<"state"<<state<<"\n";
 			return ret;
 		}
 
 		length_status = std::sprintf(buffer_status, Format(Status_PutImage_First_Successful), count_trials);
 		state = ::Constants::WaitFor_QueryImage;
+//        std::cout<<"if outside buffer_status :"<<sizeof(buffer_status)<<",";
+//        std::cout<<"length_status :"<<length_status<<" length_status size :"<<sizeof(length_status)<<" ";
+//        std::cout<<"state"<<state<<"\n";
 	}
 	else
 	{
@@ -158,23 +184,34 @@ int lpin::opencv::PutImage(void *bitmap)
 		state = ::Constants::Busy;
 
 		int ret = ::ImageProcessor::PutQueryImage(bitmap);
-
+        //std::cout<<"else"<<ret<<"\n";
 		if ( ret != 0 )
 		{
 			length_status = std::sprintf(buffer_status, Format(Status_PutImage_Failed), count_trials);
 			state = state_old;
+//            std::cout<<"buffer_status :"<<sizeof(buffer_status)<<",";
+//            std::cout<<"length_status"<<length_status<<",";
+//            std::cout<<"length_status"<<sizeof(length_status)<<" ";
+//            std::cout<<"state"<<state<<"\n";
 			return ret;
 		}
-
+        
 		length_status = std::sprintf(buffer_status, Format(Status_PutImage_Second_Successful), count_trials);
 		state = ::Constants::WaitFor_ByteBlock;
+//        std::cout<<"else if outside buffer_status :"<<sizeof(buffer_status)<<",";
+//        std::cout<<"length_status"<<length_status<<",";
+//        std::cout<<"length_status"<<sizeof(length_status)<<" ";
+//        std::cout<<"state"<<state<<"\n";
 	}
+    
+//    std::cout<<"bitmap size"<<sizeof(bitmap)<<"\n";
 
 	return 0;
 }
 
 int lpin::opencv::PutByteBlock(void *data)
 {
+//    std::cout<<"PutByteBlock()\n";
 	if ( state != ::Constants::WaitFor_ByteBlock )
 	{
 		length_status = std::sprintf(buffer_status, Format(Status_PutByteBlock_Failed), count_trials);
@@ -203,6 +240,7 @@ int lpin::opencv::PutByteBlock(void *data)
 
 int lpin::opencv::Process()
 {
+//    std::cout<<"Process()\n";
 	if ( state != ::Constants::Ready_ToStartTrial )
 	{
 		length_status = std::sprintf(buffer_status, Format(Status_Process_Failed), count_trials);
@@ -221,9 +259,18 @@ int lpin::opencv::Process()
 
 	if ( std::isnan(calculatedDistance) )
 		diff = std::numeric_limits<double>::infinity();
+    
 
 	length_logLine = std::sprintf(buffer_logLine, Format(LogLine), count_trials, calculatedDistance, actualDistance, diff, diff < 5.0 ? "PASS" : "FAIL");
 	length_fullResult += std::sprintf(buffer_fullResult + length_fullResult, Format(FullResult_Row), count_trials, calculatedDistance, actualDistance, diff, diff < 5.0 ? 1 : 0);
+//    std::cout<<"buffer_logLine size: "<<sizeof(buffer_logLine)<<"\n";
+//    std::cout<<"length_logLine:"<<length_logLine<<", length_logLine size:"<<sizeof(length_logLine)<<"\n";
+//
+//
+//    std::cout<<"buffer_fullResult size: "<<sizeof(buffer_fullResult)<<"\n"; //"buffer_fullResult : "<<buffer_fullResult<<
+//    std::cout<<"length_fullResult:"<<length_fullResult<<", length_fullResult size:"<<sizeof(length_fullResult)<<"\n";
+    
+    
 
 	++count_trials;
 
