@@ -55,7 +55,8 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         LogTextview.layer.borderWidth = 1
         LogTextview.layer.borderColor = UIColor.systemGray5.cgColor
         LogTextview.isEditable = false
-        
+        LogTextview.bounces = true
+
         
         loadDataButton.setTitle("데이터\n가져오기", for: .normal)
         loadDataButton.titleLabel?.textAlignment = .center
@@ -87,6 +88,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         queryBorderView.layer.cornerRadius = 5
         queryBorderView.layer.borderColor = UIColor.gray.cgColor
         queryImageview.layer.cornerRadius = 5
+        
 
 
         //TestDataButton.setBackgroundColor(.blue, for: .normal)
@@ -121,8 +123,8 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         print("onClickLoadData!! \(loadDataAction)")
         //json 가져오기
         let baseUrl = "https://22tta.lfin.kr/data"
-        //guard let url = URL(string: baseUrl+"/json/queryPlan_v1.json") else { return }
-        guard let url = URL(string: baseUrl+"/json/queryPlan_v1_10000.json") else { return }
+        guard let url = URL(string: baseUrl+"/json/queryPlan_v1.json") else { return }
+        //guard let url = URL(string: baseUrl+"/json/queryPlan_v1_10000.json") else { return }
         
         baseImageview.image = nil
    
@@ -217,6 +219,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                                         self?.stateLabel.text = "데이터 준비 현황(\(formatLoadCount!)/\(formatRowCount!))"
                                         self?.nextStepLabel.text = "데이터 가져오기(재실행)"
                                         self?.baseImageview.image = nil
+                                        self?.loadDataAction = false
                                         
                                     }
                                 }
@@ -225,6 +228,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                                     self?.loadDataButton.setTitle("데이터\n가져오기 ✅", for: .normal)
                                     self?.nextStepLabel.text = "시험 시작"
                                     self?.baseImageview.image = nil
+                                    self?.loadDataAction = false
                                 }
                                 
                             }
@@ -240,7 +244,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                 
             }
 
-            self.loadDataAction = false
+            
             
         }
 
@@ -272,7 +276,7 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
         let ttaTable = self.sqliteManager.readData()
         if ttaTable.count > 0 {
             //시작시간
-            let startTime = CFAbsoluteTimeGetCurrent()
+            //let startTime = CFAbsoluteTimeGetCurrent()
             
             //모듈이 동작할 스레드
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -347,9 +351,16 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                             //로그 표시
                             self?.LogTextview.insertText(logString + "\n")
                             // 텍스트 추가시 스크롤 내리기
-                            if(rowCount>=5){ //처음 로그 표시할때는 실행 안함
-                                let point = CGPoint(x: 0.0, y: ((self?.LogTextview.contentSize.height)! - (self?.LogTextview.bounds.height)!))
-                                self?.LogTextview.setContentOffset(point, animated: true)
+                            if(rowCount>5 && rowCount%2 == 0){
+//                                let point = CGPoint(x: 0.0, y: ((self?.LogTextview.contentSize.height)! - (self?.LogTextview.bounds.height)!))
+                                //self?.LogTextview.setContentOffset(point, animated: true)
+                                
+                                //텍스트 추가시 스크롤 내리기
+                                if self?.LogTextview.text.count ?? 0 > 0 {
+                                    let location = (self?.LogTextview.text.count ?? 1) - 1
+                                    let bottom = NSMakeRange(location, 1)
+                                    self?.LogTextview.scrollRangeToVisible(bottom)
+                                }
 
                             }
                         }
@@ -372,15 +383,15 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                     //self?.testStartButton.setTitle("시험시작\n(\(testCount!))", for: .normal)
                     
                     //진행상태
-                    self?.stateLabel.text = "\(testCount)번째 시험 완료"
-                    self?.testStartButton.setTitle("시험시작", for: .normal)
+                    self?.stateLabel.text = "시험 완료"//"\(testCount)번째 시험 완료"
+//                    self?.testStartButton.setTitle("시험시작", for: .normal)
                     
-                    if(testCount == 3){
-                        //다음 지시사항
-                        //self?.ttaDataManager.updateData(0)
-                        self?.nextStepLabel.text = "시험결과 내보내기"
-                        self?.testStartButton.setTitle("시험시작\n✅", for: .normal)
-                    }
+//                    if(testCount == 3){
+                    //다음 지시사항
+                    //self?.ttaDataManager.updateData(0)
+                    self?.nextStepLabel.text = "시험결과 내보내기"
+                    self?.testStartButton.setTitle("시험시작\n✅", for: .normal)
+//                    }
                     
                     self?.baseImageview.image = nil
                     self?.baseImageLabel.text = ""
@@ -388,16 +399,10 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
                     self?.queryImageLabel.text = ""
                     
                     //끝나는 시간
-                    let durationTime = CFAbsoluteTimeGetCurrent() - startTime
-                    print("경과 시간: \(durationTime)")
+                    //let durationTime = CFAbsoluteTimeGetCurrent() - startTime
+                    //print("경과 시간: \(durationTime)")
                     
-                    //텍스트 추가시 스크롤 내리기
-//                    if self?.LogTextview.text.count ?? 0 > 0 {
-//                        let location = (self?.LogTextview.text.count ?? 1) - 1
-//                        let bottom = NSMakeRange(location, 1)
-//                        self?.LogTextview.scrollRangeToVisible(bottom)
-//
-//                    }
+                    
                 }
                 
                 self?.startTestRunState = false
@@ -474,8 +479,6 @@ class MainViewController: UIViewController, UIDocumentPickerDelegate {
             }
             
         }
-        
-        
     }
     
     
